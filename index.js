@@ -31,7 +31,6 @@ function connectWebSocket() {
     ws.on("message", async (data) => {
         try {
             const msg = JSON.parse(data);
-            console.log("WS:", msg);
 
             if (msg.type === "pong") {
             } else if (msg.type === "registered") {
@@ -42,14 +41,19 @@ function connectWebSocket() {
                 if (channel) {
                     channel.send(`**${msg.player}:** ${msg.message}`);
                 }
-            } else if (msg.type === "mc_join") {
-                if (msg.sender === "discord") return; // Ignore messages from Discord
+            }
+            
+            else if (msg.type === "mc_dead") {
+                const channel = await client.channels.fetch(CHANNEL_ID);
+                if (channel) {
+                    channel.send(`💀 **${msg.player}** died > ${msg.reason}`);
+                }
+            }  else if (msg.type === "mc_join") {
                 const channel = await client.channels.fetch(CHANNEL_ID);
                 if (channel) {
                     channel.send(`➡️ **${msg.player}** joined the game.`);
                 }
             } else if (msg.type === "mc_quit") {
-                if (msg.sender === "discord") return; // Ignore messages from Discord
                 const channel = await client.channels.fetch(CHANNEL_ID);
                 if (channel) {
                     channel.send(`⬅️ **${msg.player}** left the game.`);
@@ -103,7 +107,6 @@ client.on("messageCreate", (message) => {
         }
 
         if (isReply && reply && reply.content) {
-            console.log("Sending reply");
             ws.send(JSON.stringify({
                 serverId: message.guildId,
                 sender: 'discord',
@@ -113,7 +116,6 @@ client.on("messageCreate", (message) => {
                 message: content
             }));
         } else {
-            console.log("Sending chat");
             ws.send(JSON.stringify({
                 serverId: message.guildId,
                 sender: 'discord',
