@@ -58,6 +58,11 @@ function connectWebSocket() {
                 if (channel) {
                     channel.send(`⬅️ **${msg.player}** left the game.`);
                 }
+            } else {
+                const channel = await client.channels.fetch(CHANNEL_ID);
+                if (channel) {
+                    channel.send(`⚠️ Unknown message type received: \`${msg.type}\``);
+                }
             }
             
         } catch (err) {
