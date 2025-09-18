@@ -4,7 +4,7 @@ import WebSocket from "ws";
 
 dotenv.config();
 
-const { DISCORD_TOKEN, CHANNEL_ID, ROOM_ID, WS_URL } = process.env;
+const { DISCORD_TOKEN, CHANNEL_ID, ROOM_ID, ROOM_SECRET, WS_URL } = process.env;
 
 // Discord client setup
 const client = new Client({
@@ -25,44 +25,50 @@ function connectWebSocket() {
         console.log("==[ Connected to Websocket ]==");
         // Send register message
         console.log("Registering to room `" + ROOM_ID + "`");
-        ws.send(JSON.stringify({ type: "register", roomId: ROOM_ID }));
+        ws.send(JSON.stringify({ type: "register", roomId: ROOM_ID, roomSecret: ROOM_SECRET }));
     });
 
     ws.on("message", async (data) => {
         try {
             const msg = JSON.parse(data);
 
-            if (msg.type === "pong") {
-            } else if (msg.type === "registered") {
+            // Ignore some default send messages
+            const ignoreTypes = ["pong", "ws_join", "ws_quit", "ping", "register", "chat_reply"];
+            if (ignoreTypes.includes(msg.type)) return;
+
+            const channel = await client.channels.fetch(CHANNEL_ID);
+            if (msg.type === "registered") {
                 console.log("Registered to room");
-            } else if (msg.type === "chat") {
+            }
+            
+            // Chats
+            else if (msg.type === "chat") {
                 if (msg.sender === "discord") return; // Ignore messages from Discord
-                const channel = await client.channels.fetch(CHANNEL_ID);
-                if (channel) {
-                    channel.send(`**${msg.player}:** ${msg.message}`);
+                channel?.send(`**${msg.player}:** ${msg.message}`);
+            }
+            
+            // MC Events
+            else if (msg.type === "mc_dead") {
+                channel?.send(`💀 **${msg.player}** died > ${msg.reason}`);
+            }  else if (msg.type === "mc_join") {
+                channel?.send(`➡️ **${msg.player}** joined the game.`);
+            } else if (msg.type === "mc_quit") {
+                channel?.send(`⬅️ **${msg.player}** left the game.`);
+            }
+            
+            // Power events
+            else if (msg.type === "mc_power") {
+                if (msg.event === "up") {
+                    channel?.send(`🟢 **Server has started.**`);
+                } else if (msg.event === "down") {
+                    channel?.send(`🔴 **Server has stopped.**`);
                 }
             }
             
-            else if (msg.type === "mc_dead") {
-                const channel = await client.channels.fetch(CHANNEL_ID);
-                if (channel) {
-                    channel.send(`💀 **${msg.player}** died > ${msg.reason}`);
-                }
-            }  else if (msg.type === "mc_join") {
-                const channel = await client.channels.fetch(CHANNEL_ID);
-                if (channel) {
-                    channel.send(`➡️ **${msg.player}** joined the game.`);
-                }
-            } else if (msg.type === "mc_quit") {
-                const channel = await client.channels.fetch(CHANNEL_ID);
-                if (channel) {
-                    channel.send(`⬅️ **${msg.player}** left the game.`);
-                }
-            } else {
-                const channel = await client.channels.fetch(CHANNEL_ID);
-                if (channel) {
-                    channel.send(`⚠️ Unknown message type received: \`${msg.type}\``);
-                }
+            // Unknown message type
+            else {
+                channel?.send(`⚠️ Unknown message type received: \`${msg.type}\``);
+                console.log("Received unknown message type:", msg);
             }
             
         } catch (err) {
