@@ -25,7 +25,7 @@ function connectWebSocket() {
         console.log("==[ Connected to Websocket ]==");
         // Send register message
         console.log("Registering to room `" + ROOM_ID + "`");
-        ws.send(JSON.stringify({ type: "register", roomId: ROOM_ID, roomSecret: ROOM_SECRET }));
+        ws.send(JSON.stringify({ type: "register", roomId: ROOM_ID, roomSecret: ROOM_SECRET, is: "discord_bot" }));
     });
 
     ws.on("message", async (data) => {
@@ -35,6 +35,11 @@ function connectWebSocket() {
             // Ignore some default send messages
             const ignoreTypes = ["pong", "ws_join", "ws_quit", "ping", "register", "chat_reply"];
             if (ignoreTypes.includes(msg.type)) return;
+
+            if (msg.type === "error") {
+                console.error("❌ Error from server:", msg.message);
+                return;
+            }
 
             const channel = await client.channels.fetch(CHANNEL_ID);
             if (msg.type === "registered") {
