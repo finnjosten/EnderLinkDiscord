@@ -59,6 +59,8 @@ function connectWebSocket() {
                 channel?.send(`➡️ **${msg.player}** joined the game.`);
             } else if (msg.type === "mc_quit") {
                 channel?.send(`⬅️ **${msg.player}** left the game.`);
+            } else if (msg.type === "mc_advancement") {
+                channel?.send(`🏆 **${msg.player} has gotten an Advancement**\n\n**${msg.title}**\n_${msg.description}_`);
             }
             
             // Power events
